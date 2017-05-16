@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 2.8)
+project( denseFlow )
+find_package( OpenCV REQUIRED )
+include_directories( ${OpenCV_INCLUDE_DIRS} )
+set(CMAKE_CXX_FLAGS "-g")
+add_executable( denseFlow_gpu denseFlow_gpu.cpp )
+target_link_libraries( denseFlow_gpu ${OpenCV_LIBS} )
