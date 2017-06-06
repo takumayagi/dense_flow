@@ -8,15 +8,22 @@
 #include <iostream>
 using namespace std;
 using namespace cv;
-using namespace cv::cuda;
+//using namespace cv::cuda;
 
-static void convertFlowToImage(const Mat &flow, Mat &img,
+int cst(float v, float L, float H){
+    return v > H ? 255 : v < L ? 0 : cvRound(255*(v - L)/(H - L));
+}
+
+//static void convertFlowToImage(const Mat &flow, Mat &img,
+static void convertFlowToImage(InputArray _flow, OutputArray _img,
         double lb, double hb, int magnitude) {
+    Mat flow = _flow.getMat();
+    Mat img = _img.getMat();
 	#define CAST(v, L, H) ((v) > (H) ? 255 : (v) < (L) ? 0 : cvRound(255*((v) - (L))/((H)-(L))))
 	for (int i = 0; i < flow.rows; ++i) {
 		for (int j = 0; j < flow.cols; ++j) {
-			float x = flow.at<float>(i,j,0);
-			float y = flow.at<float>(i,j,1);
+			float x = flow.at<Vec3f>(i,j)[0];
+			float y = flow.at<Vec3f>(i,j)[1];
             if (magnitude){
                 float mag = sqrt(x * x + y * y);
 			    img.at<Vec3b>(i,j) = Vec3b(CAST(x, lb, hb),
@@ -24,7 +31,6 @@ static void convertFlowToImage(const Mat &flow, Mat &img,
             } else {
 			    img.at<Vec3b>(i,j) = Vec3b(CAST(x, lb, hb),
                     CAST(y, lb, hb), 0);
-
             }
 		}
 	}
@@ -64,25 +70,31 @@ int main(int argc, char** argv){
     int step = cmd.get<int>("step");
     int magnitude = cmd.get<int>("magnitude");
 
+
 	VideoCapture capture(vidFile);
 	if(!capture.isOpened()) {
 		printf("Could not initialize capturing..\n");
 		return -1;
 	}
-
 	int frame_num = 0;
-	Mat image, prev_image, prev_grey, grey, frame, flow;
-	GpuMat frame_0, frame_1, flow_g;
+    Mat image, prev_image, prev_grey, grey, frame, flow;
+    cuda::GpuMat frame_0, frame_1, flow_g;
 
-	setDevice(device_id);
-    FarnebackOpticalFlow *alg_farn = FarnebackOpticalFlow::create();
-	OpticalFlowDual_TVL1 *alg_tvl1 = OpticalFlowDual_TVL1::create();
-	BroxOpticalFlow *alg_brox = BroxOpticalFlow::create(0.197f, 50.0f, 0.8f, 10, 77, 10);
+    cuda::setDevice(device_id);
+    Ptr<cuda::FarnebackOpticalFlow> alg_farn = cuda::FarnebackOpticalFlow::create();
+    Ptr<cuda::OpticalFlowDual_TVL1> alg_tvl1 = cuda::OpticalFlowDual_TVL1::create();
+    Ptr<cuda::BroxOpticalFlow> alg_brox = cuda::BroxOpticalFlow::create(0.197f, 50.0f, 0.8f, 10, 77, 10);
+
+    printf("Begin capturing...\n");
+    printf("%s\n", vidFile.c_str());
 
 	while(true) {
 		capture >> frame;
-		if(frame.empty())
+        printf("Frame %d\n", frame_num);
+		if(frame.empty()){
+            printf("Empty frame detected: finish\n");
 			break;
+        }
 		if(frame_num == 0) {
 			image.create(frame.size(), CV_8UC3);
 			grey.create(frame.size(), CV_8UC1);
@@ -117,7 +129,7 @@ int main(int argc, char** argv){
 			alg_tvl1->calc(frame_0, frame_1, flow_g);
 			break;
 		case 2:
-			GpuMat d_frame0f, d_frame1f;
+            cuda::GpuMat d_frame0f, d_frame1f;
 	        frame_0.convertTo(d_frame0f, CV_32F, 1.0 / 255.0);
 	        frame_1.convertTo(d_frame1f, CV_32F, 1.0 / 255.0);
 			alg_brox->calc(d_frame0f, d_frame1f, flow_g);
@@ -127,14 +139,16 @@ int main(int argc, char** argv){
 		flow_g.download(flow);
 
 		// Output optical flow
-		Mat img(flow.size(),CV_8UC3);
+        cv::Mat img(flow.size(), CV_8UC3);
 		convertFlowToImage(flow, img, -bound, bound, magnitude);
-		char tmp[20];
+
+        char tmp[20];
 		sprintf(tmp,"_%05d.jpg",int(frame_num));
 		imwrite(imgFile + tmp, img);
 
 		std::swap(prev_grey, grey);
 		std::swap(prev_image, image);
+
 		frame_num = frame_num + 1;
 
 		int step_t = step;
