@@ -1,4 +1,5 @@
-This is a sample code for extrating dense flow field given a video.
+This is a sample code for extrating dense flow field given a video.  
+**Caution: this code is not maintained anymore, please consider using other stable codes unless you understand the code**
 
 # Dependencies
 * OpenCV 3.1+
