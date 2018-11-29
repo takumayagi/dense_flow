@@ -7,8 +7,8 @@ This is a sample code for extrating dense flow field given a video.
 
 # Optical flow calculation usage
 ```
-./denseFlow_gpu -f <input file> -i <output path> -b <threshold> -t <method> -d <device_id> -s <step> -m <output_magnitude>
-./denseFlow_gpu -f test.avi -i tmp/flow_xym -b 20 -t 2 -d 0 -s 1 -m 0
+./denseFlow_gpu -v <input file> -i <output path> -b <threshold> -t <method> -d <device_id> -s <step> -m <output_magnitude>
+./denseFlow_gpu -v test.avi -i tmp/flow_xym -b 20 -t 2 -d 0 -s 1 -m 0
 ```
 test.avi: input video
 
