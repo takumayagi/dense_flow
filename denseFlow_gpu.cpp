@@ -22,8 +22,8 @@ static void convertFlowToImage(InputArray _flow, OutputArray _img,
 	#define CAST(v, L, H) ((v) > (H) ? 255 : (v) < (L) ? 0 : cvRound(255*((v) - (L))/((H)-(L))))
 	for (int i = 0; i < flow.rows; ++i) {
 		for (int j = 0; j < flow.cols; ++j) {
-			float x = flow.at<Vec3f>(i,j)[0];
-			float y = flow.at<Vec3f>(i,j)[1];
+			float x = flow.at<Vec2f>(i,j)[0];
+			float y = flow.at<Vec2f>(i,j)[1];
             if (magnitude){
                 float mag = sqrt(x * x + y * y);
 			    img.at<Vec3b>(i,j) = Vec3b(CAST(x, lb, hb),
